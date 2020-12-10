@@ -1,9 +1,12 @@
 ﻿using ComercioEletronico.WebAPI.Data;
 using ComercioEletronico.WebAPI.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace ComercioEletronico.WebAPI.Controllers
@@ -20,10 +23,33 @@ namespace ComercioEletronico.WebAPI.Controllers
         }
 
         // GET: api/Orders
-        [HttpGet]
+        [HttpGet, Authorize]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
-            return await _context.Orders.ToListAsync();
+            if (User.Identity.IsAuthenticated)
+            {
+                if (int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out int id))
+                {
+                    var query = _context.Orders
+                        .Include(item => item.Items)
+                            .ThenInclude(item => item.Product)
+                        .Include(item => item.Client)
+                        .OrderBy(item => item.IsConfirmed);
+
+                    if (User.FindFirstValue(ClaimTypes.Role) is string @string && Enum.Parse<ClientRole>(@string) == ClientRole.Administrator)
+                    {
+                        return await query.ToListAsync();
+                    }
+
+                    return await query
+                        .Where(item => item.Client.Id == id)
+                        .ToListAsync();
+                }
+
+                return NotFound();
+            }
+
+            return Unauthorized();
         }
 
         // GET: api/Orders/5
@@ -73,13 +99,20 @@ namespace ComercioEletronico.WebAPI.Controllers
 
         // POST: api/Orders
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
+        [HttpPost, Authorize]
         public async Task<ActionResult<Order>> PostOrder(Order order)
         {
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
+            if (User.Identity.IsAuthenticated)
+            {
+                _context.Clients.Attach(order.Client);
+                _context.Products.AttachRange(order.Items.Select(_ => _.Product));
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetOrder", new { id = order.Id }, order);
+                return CreatedAtAction("GetOrder", new { id = order.Id }, order);
+            }
+
+            return Unauthorized();
         }
 
         // DELETE: api/Orders/5

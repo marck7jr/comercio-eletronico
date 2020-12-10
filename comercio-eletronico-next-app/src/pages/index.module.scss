@@ -1,0 +1,11 @@
+.index {
+  & > button {
+    margin: 1em;
+  }
+
+  &_container {
+    display: flex;
+    list-style: none;
+    padding: 0;
+  }
+}

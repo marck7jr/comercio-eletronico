@@ -1,5 +1,6 @@
 ﻿using ComercioEletronico.WebAPI.Data;
 using ComercioEletronico.WebAPI.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -20,7 +21,7 @@ namespace ComercioEletronico.WebAPI.Controllers
         }
 
         // GET: api/Clients
-        [HttpGet]
+        [HttpGet, Authorize(Roles = "Administrator")]
         public async Task<ActionResult<IEnumerable<Client>>> GetClients()
         {
             return await _context.Clients.ToListAsync();
@@ -76,6 +77,14 @@ namespace ComercioEletronico.WebAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Client>> PostClient(Client client)
         {
+            if (await _context.Clients.AnyAsync(_ => _.Email == client.Email))
+            {
+                return BadRequest(new
+                {
+                    error = $"The email '{client.Email}' is already in use."
+                });
+            }
+
             _context.Clients.Add(client);
             await _context.SaveChangesAsync();
 
