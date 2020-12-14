@@ -66,6 +66,7 @@ const Checkout = () => {
               <tr>
                 <th>Produto</th>
                 <th>Quantidade</th>
+                <th>Valor Unitário</th>
                 <th>Subtotal</th>
               </tr>
             </thead>
@@ -75,6 +76,7 @@ const Checkout = () => {
                   <tr key={i}>
                     <td>{_.product.name}</td>
                     <td>{_.count}</td>
+                    <td>{_.product.value}</td>
                     <td>{numberFormatter.format(_.product.value * _.count)}</td>
                   </tr>
                 );
